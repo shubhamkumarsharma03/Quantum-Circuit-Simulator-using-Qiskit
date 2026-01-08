@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import mplcursors
 import threading
 import time
+import webbrowser
+import os
 
 from ..application.circuit_controller import CircuitController
 from ..application.finance_controller import FinanceController
@@ -25,7 +27,7 @@ class QuantumGUI(ctk.CTk):
         super().__init__()
 
         # Window Setup
-        self.title("Industry-Grade Quantum Simulator")
+        self.title("Quantum Circuit Simulator using Qiskit")
         self.geometry("1400x900")
         
         # Controllers
@@ -42,7 +44,7 @@ class QuantumGUI(ctk.CTk):
         self.top_bar = ctk.CTkFrame(self, height=40, corner_radius=0)
         self.top_bar.pack(side="top", fill="x", padx=0, pady=0)
         
-        self.title_label = ctk.CTkLabel(self.top_bar, text="Quantum Simulator 2.0", font=("Roboto", 20, "bold"))
+        self.title_label = ctk.CTkLabel(self.top_bar, text="Quantum Simulator", font=("Roboto", 20, "bold"))
         self.title_label.pack(side="left", padx=20, pady=10)
         
         self.theme_switch = ctk.CTkSwitch(self.top_bar, text="Dark Mode", command=self.toggle_theme, onvalue="Dark", offvalue="Light")
@@ -52,6 +54,10 @@ class QuantumGUI(ctk.CTk):
         # Reset Button
         self.reset_btn = ctk.CTkButton(self.top_bar, text="Reset App", width=80, fg_color="#C62828", hover_color="#B71C1C", command=self.reset_app)
         self.reset_btn.pack(side="right", padx=10)
+
+        # Theory Button
+        self.theory_btn = ctk.CTkButton(self.top_bar, text="Theory Guide", width=100, command=self.open_theory)
+        self.theory_btn.pack(side="right", padx=10)
 
         # --- Status Bar ---
         self.status_bar = ctk.CTkFrame(self, height=30, corner_radius=0)
@@ -240,10 +246,25 @@ class QuantumGUI(ctk.CTk):
             elif gate == "X": self.controller.current_circuit.x(idx1)
             elif gate == "Y": self.controller.current_circuit.y(idx1)
             elif gate == "Z": self.controller.current_circuit.z(idx1)
-            # ... (Map other gates similarly) ...
+            elif gate == "S": self.controller.current_circuit.s(idx1)
+            elif gate == "T": self.controller.current_circuit.t(idx1)
+            
+            elif gate == "RX":
+                theta = float(self.theta_entry.get())
+                self.controller.current_circuit.rx(idx1, theta)
+            elif gate == "RY":
+                theta = float(self.theta_entry.get())
+                self.controller.current_circuit.ry(idx1, theta)
+            elif gate == "RZ":
+                theta = float(self.theta_entry.get())
+                self.controller.current_circuit.rz(idx1, theta)
+                
             elif gate == "CX":
                 idx2 = int(self.idx2_entry.get())
                 self.controller.current_circuit.cx(idx1, idx2)
+            elif gate == "SWAP":
+                idx2 = int(self.idx2_entry.get())
+                self.controller.current_circuit.swap(idx1, idx2)
             
             self.update_status(f"Added {gate} gate.")
             self.visualize_circ() # Auto-refresh diagram on edit
@@ -407,6 +428,20 @@ class QuantumGUI(ctk.CTk):
         toolbar.update()
         
         canvas.get_tk_widget().pack(fill="both", expand=True)
+
+    def open_theory(self):
+        """Open the THEORY.md file in the default browser/viewer"""
+        try:
+            # Assume we are in root (main.py execution)
+            path = os.path.abspath("THEORY.md")
+            if not os.path.exists(path):
+                # Fallback: maybe we are running from inside module
+                path = os.path.abspath("../../THEORY.md")
+            
+            webbrowser.open(path)
+            self.update_status("Opened Theory Guide.")
+        except Exception as e:
+            self.update_status(f"Error opening help: {e}")
 
 def launch_gui():
     app = QuantumGUI()

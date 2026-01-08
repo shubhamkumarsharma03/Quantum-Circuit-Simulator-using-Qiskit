@@ -2,6 +2,8 @@
 
 This guide provides step-by-step instructions for running quantum circuits using the **Circuit Builder** and **Quantum Finance** tabs in the GUI.
 
+> **Tip**: For a deep dive into the underlying concepts (Qubits, Gates, Entanglement), check out the [**Quantum Theory Guide**](THEORY.md).
+
 ---
 
 ## 1. Bell State (Entanglement)
@@ -67,14 +69,14 @@ This guide provides step-by-step instructions for running quantum circuits using
 - **Histogram**: Two bars roughly equal height at `000` and `111`.
 - **Note**: If you see other bars like `010` or `101`, double-check that you entered the correct indices for the CNOT gates!
 
-![GHZ Correct Output](ghz_correct_output.png)
+![GHZ Correct Output](images/ghz_correct_output.png)
 
 #### Detailed Views:
 **Circuit Diagram**:
-![GHZ Circuit](ghz_circuit_detail.png)
+![GHZ Circuit](images/ghz_circuit_detail.png)
 
 **Measurement Results**:
-![GHZ Histogram](ghz_histogram_detail.png)
+![GHZ Histogram](images/ghz_histogram_detail.png)
 
 ---
 
