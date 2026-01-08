@@ -15,6 +15,10 @@ class CircuitController:
         self._config = load_config()
         self._simulation_manager = SimulationManager(self._config.DEFAULT_BACKEND)
         self.current_circuit = None
+        
+        # Educational Stepping State
+        self.step_mode = False
+        self.current_step = 0 # Points to the index of the next gate to be applied (0 = start)
 
     def create_circuit(self, num_qubits: int):
         """
@@ -91,6 +95,24 @@ class CircuitController:
         counts, qiskit_circ = self._simulation_manager.run_simulation(self.current_circuit, shots)
         return counts, qiskit_circ
 
+    def get_circuit_statevector(self):
+        """
+        Returns the statevector for the current circuit.
+        """
+        if not self.current_circuit:
+            raise ValueError("No circuit defined.")
+        if len(self.current_circuit.qubits) > 10:
+             # Safety check: Statevector grows exponentially 2^N.
+             # 10 qubits = 1024 complex numbers (manageable).
+             # 20 qubits = 1M complex numbers (slow for GUI).
+             raise ValueError("Statevector visualization disabled for > 10 qubits for performance.")
+             
+             raise ValueError("Statevector visualization disabled for > 10 qubits for performance.")
+             
+        # Support Stepping:
+        target_circuit = self.get_active_circuit()
+        return self._simulation_manager.get_statevector(target_circuit)
+
     def get_classical_comparison(self, bit_index: int, value: int):
         """
         Returns a classical bit simulation result for comparison.
@@ -99,3 +121,49 @@ class CircuitController:
         sim = ClassicalBitSimulator(bit_index + 1)
         sim.set_bit(bit_index, value)
         return sim.simulate_stochastic()
+
+    # ===============================
+    # Educational Stepping Logic
+    # ===============================
+    def toggle_step_mode(self, active: bool):
+        self.step_mode = active
+        if active and self.current_circuit:
+            # If activating, start at the end or beginning? Let's start at beginning.
+            self.current_step = 0
+            
+    def step_forward(self):
+        if not self.current_circuit: return
+        if self.current_step < len(self.current_circuit.gates):
+            self.current_step += 1
+            
+    def step_backward(self):
+        if not self.current_circuit: return
+        if self.current_step > 0:
+            self.current_step -= 1
+
+    def get_active_circuit(self):
+        """
+        Returns the circuit to be visualized/simulated.
+        If step_mode is True, returns partial circuit up to current_step.
+        """
+        if not self.current_circuit: return None
+        
+        if not self.step_mode:
+            return self.current_circuit
+            
+        # Create a partial copy
+        # We need a new instance so we don't mutate the original when passing to backend
+        # Assuming shallow copy is enough since we just want a subset of gates list
+        import copy
+        partial = copy.copy(self.current_circuit)
+        # Deep copy the list structure typically, but QuantumCircuit init makes new lists
+        # Let's just make a new one to be safe and clean
+        partial = QuantumCircuit(len(self.current_circuit.qubits))
+        partial.gates = self.current_circuit.gates[:self.current_step]
+        partial.measurements = self.current_circuit.measurements # Keep measurements? Maybe not for partial?
+        # Usually partial steps show coherent state, so measurements might interfere if they are in the middle?
+        # For now, let's keep them if they are in the range? 
+        # Our logical circuit keeps measurements separate. Let's ignore them for step-viz usually.
+        partial.measurements = [] 
+        
+        return partial

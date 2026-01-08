@@ -11,6 +11,7 @@ import os
 
 from ..application.circuit_controller import CircuitController
 from ..application.finance_controller import FinanceController
+from ..application.challenge_manager import ChallengeManager
 from ..execution.qiskit_engine import QiskitEngine
 from .visualizer import QuantumVisualizer
 
@@ -31,8 +32,10 @@ class QuantumGUI(ctk.CTk):
         self.geometry("1400x900")
         
         # Controllers
+        # Controllers
         self.controller = CircuitController()
         self.finance_controller = FinanceController()
+        self.challenge_manager = ChallengeManager()
         
         # State
         self.current_theme = "Dark"
@@ -112,9 +115,11 @@ class QuantumGUI(ctk.CTk):
         
         self.tab_circuit = self.tab_system.add("Circuit Builder")
         self.tab_finance = self.tab_system.add("Quantum Finance")
+        self.tab_challenges = self.tab_system.add("Challenges")
         
         self.setup_circuit_tab()
         self.setup_finance_tab()
+        self.setup_challenge_tab()
 
     def update_status(self, message, is_loading=False):
         """Thread-safe status update"""
@@ -203,8 +208,38 @@ class QuantumGUI(ctk.CTk):
         exec_frame.pack(fill="x", pady=20)
         ctk.CTkButton(exec_frame, text="Visualize Circuit", command=self.visualize_circ).pack(fill="x", padx=10, pady=5)
         ctk.CTkButton(exec_frame, text="Run Simulation", fg_color="#D32F2F", command=self.start_sim_thread).pack(fill="x", padx=10, pady=5)
+        # Educational feature
+        ctk.CTkButton(exec_frame, text="View Bloch Spheres (State)", fg_color="#7B1FA2", command=self.start_bloch_thread).pack(fill="x", padx=10, pady=5)
+        
+        # Add Stepping UI
+        self.setup_step_controls(self.tab_circuit)
 
         self.on_gate_select() # Init state
+
+    def start_bloch_thread(self):
+        self.update_status("Calculating Statevector...", is_loading=True)
+        thread = threading.Thread(target=self.bloch_task)
+        thread.daemon = True
+        thread.start()
+
+    def bloch_task(self):
+        try:
+            sv = self.controller.get_circuit_statevector()
+            self.after(0, lambda: self.finish_bloch(sv))
+        except Exception as e:
+            self.after(0, lambda: self.update_status(f"Bloch Error: {e}"))
+
+    def finish_bloch(self, statevector):
+        self.update_status("Statevector Calculated.")
+        
+        # Plot Bloch
+        plt.style.use("default") # Bloch uses white bg usually
+        fig = QuantumVisualizer.plot_bloch(statevector)
+        
+        # We might need to resize it or create a new window if it's too big, 
+        # but for now lets try embedding it in the bottom frame (replacing histogram)
+        self.embed_figure(fig, self.viz_bottom_frame)
+
 
     def on_gate_select(self):
         gate = self.gate_var.get()
@@ -270,6 +305,66 @@ class QuantumGUI(ctk.CTk):
             self.visualize_circ() # Auto-refresh diagram on edit
         except Exception as e:
             self.update_status(f"Error adding gate: {e}")
+
+            self.visualize_circ() # Auto-refresh diagram on edit
+        except Exception as e:
+            self.update_status(f"Error adding gate: {e}")
+
+    # ==========================
+    # STEPPING / DEBUGGING UI
+    # ==========================
+    def setup_step_controls(self, parent):
+        self.step_frame = ctk.CTkFrame(parent)
+        self.step_frame.pack(fill="x", pady=10)
+        
+        ctk.CTkLabel(self.step_frame, text="Interactive Debugger").pack(pady=5)
+        
+        controls = ctk.CTkFrame(self.step_frame, fg_color="transparent")
+        controls.pack()
+        
+        self.btn_debug = ctk.CTkButton(controls, text="Start Debug", width=80, command=self.toggle_debug)
+        self.btn_debug.grid(row=0, column=0, padx=5)
+        
+        self.btn_prev = ctk.CTkButton(controls, text="<<", width=40, state="disabled", command=self.on_prev_step)
+        self.btn_prev.grid(row=0, column=1, padx=5)
+        
+        self.step_label = ctk.CTkLabel(controls, text="Step: 0")
+        self.step_label.grid(row=0, column=2, padx=5)
+        
+        self.btn_next = ctk.CTkButton(controls, text=">>", width=40, state="disabled", command=self.on_next_step)
+        self.btn_next.grid(row=0, column=3, padx=5)
+        
+    def toggle_debug(self):
+        if not self.controller.current_circuit: return
+        
+        is_active = not self.controller.step_mode
+        self.controller.toggle_step_mode(is_active)
+        
+        if is_active:
+            self.btn_debug.configure(text="Stop", fg_color="red")
+            self.btn_prev.configure(state="normal")
+            self.btn_next.configure(state="normal")
+        else:
+            self.btn_debug.configure(text="Start Debug", fg_color=["#3B8ED0", "#1F6AA5"])
+            self.btn_prev.configure(state="disabled")
+            self.btn_next.configure(state="disabled")
+            
+        self.refresh_step_view()
+        
+    def on_next_step(self):
+        self.controller.step_forward()
+        self.refresh_step_view()
+        
+    def on_prev_step(self):
+        self.controller.step_backward()
+        self.refresh_step_view()
+        
+    def refresh_step_view(self):
+        self.step_label.configure(text=f"Step: {self.controller.current_step}")
+        self.visualize_circ()
+        # Also auto-update Bloch if we are in debug mode? Yes, that's the point.
+        if self.controller.step_mode:
+            self.start_bloch_thread()
 
     # ==========================
     # FINANCE TAB
@@ -370,9 +465,68 @@ class QuantumGUI(ctk.CTk):
         self.visualize_circ()
         self.update_status(f"Generated {encoding} circuit.")
 
+        self.visualize_circ()
+        self.update_status(f"Generated {encoding} circuit.")
+
     # ==========================
-    # RESET LOGIC
+    # CHALLENGE TAB
     # ==========================
+    def setup_challenge_tab(self):
+        # 1. Challenge Selector
+        sel_frame = ctk.CTkFrame(self.tab_challenges)
+        sel_frame.pack(fill="x", pady=10)
+        
+        ctk.CTkLabel(sel_frame, text="Select Challenge:").pack(pady=5)
+        self.challenge_combo = ctk.CTkComboBox(sel_frame, values=self.challenge_manager.get_challenges(), width=250, command=self.on_challenge_select)
+        self.challenge_combo.pack(pady=5)
+        
+        # 2. Description
+        self.desc_frame = ctk.CTkFrame(self.tab_challenges)
+        self.desc_frame.pack(fill="both", expand=True, pady=10)
+        
+        self.desc_label = ctk.CTkLabel(self.desc_frame, text="Select a challenge to begin...", wraplength=350, justify="left")
+        self.desc_label.pack(padx=10, pady=10)
+        
+        # 3. Actions
+        act_frame = ctk.CTkFrame(self.tab_challenges)
+        act_frame.pack(fill="x", pady=10)
+        
+        ctk.CTkButton(act_frame, text="Load Challenge", command=self.load_challenge).pack(pady=5, fill="x")
+        ctk.CTkButton(act_frame, text="Verify Solution", fg_color="green", command=self.check_challenge_solution).pack(pady=5, fill="x")
+
+    def on_challenge_select(self, choice):
+        # Just update desc
+        # choice format "key: name"
+        pass 
+
+    def load_challenge(self):
+        choice = self.challenge_combo.get()
+        challenge = self.challenge_manager.set_challenge(choice)
+        
+        if challenge:
+            self.desc_label.configure(text=f"GOAL: {challenge['description']}\n\nTarget Details:\nQubits: {challenge['qubits']}")
+            
+            # Reset circuit to match challenge requirements
+            self.controller.create_circuit(challenge["qubits"])
+            self.update_status(f"Started Challenge: {challenge['name']}")
+            self.visualize_circ()
+            
+            # Switch to circuit tab to let them work
+            self.tab_system.set("Circuit Builder")
+        
+    def check_challenge_solution(self):
+        if not self.controller.current_circuit:
+            self.update_status("No circuit to check.")
+            return
+
+        success, msg = self.challenge_manager.check_solution(self.controller.current_circuit)
+        
+        if success:
+            messagebox.showinfo("Challenge Success!", f"Congratulations!\n\n{msg}")
+            self.update_status("Challenge Complete!")
+        else:
+            messagebox.showerror("Try Again", f"{msg}")
+            self.update_status("Verification Failed.")
     def reset_app(self):
         # 1. Reset Circuit Tab
         self.controller.create_circuit(2) # Default 2 qubits
@@ -406,7 +560,12 @@ class QuantumGUI(ctk.CTk):
     def visualize_circ(self):
         # Use pure translation for visualization (no simulation required)
         # This prevents "No counts" errors when constructing circuits without measurements
-        q_circ = QiskitEngine.translate_to_qiskit(self.controller.current_circuit)
+        
+        # FIX: Use get_active_circuit() to support Stepping Mode
+        circuit_to_show = self.controller.get_active_circuit()
+        if not circuit_to_show: return
+
+        q_circ = QiskitEngine.translate_to_qiskit(circuit_to_show)
         
         # Plot
         plt.style.use("default") 

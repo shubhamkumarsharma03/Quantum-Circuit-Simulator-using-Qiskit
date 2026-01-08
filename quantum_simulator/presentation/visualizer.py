@@ -1,5 +1,4 @@
-import matplotlib.pyplot as plt
-from qiskit.visualization import plot_histogram
+from qiskit.visualization import plot_histogram, plot_bloch_multivector
 from ..infrastructure.logger import setup_logger
 
 logger = setup_logger("visualizer")
@@ -37,6 +36,16 @@ class QuantumVisualizer:
         # plot_histogram returns a matplotlib Figure
         fig = plot_histogram(counts)
         fig.suptitle("Quantum Measurement Results") # Set title on figure
+        return fig
+
+    @staticmethod
+    def plot_bloch(statevector):
+        """
+        Returns the Bloch sphere figure for the statevector.
+        """
+        logger.info("Plotting Bloch Multi-vector...")
+        fig = plot_bloch_multivector(statevector)
+        # Fix title position if needed, or leave default
         return fig
 
     @staticmethod

@@ -20,3 +20,23 @@ class SimulatorBackend:
         job = self.backend.run(transpiled_circuit, shots=shots)
         result = job.result()
         return result.get_counts()
+
+    def run_statevector(self, qiskit_circ):
+        """
+        Runs the circuit on a statevector simulator to get the full quantum state.
+        Useful for educational visualizations (Bloch sphere).
+        """
+        # specialized backend for statevector
+        sv_backend = Aer.get_backend('statevector_simulator')
+        
+        # Remove measurements to get the coherent state
+        # (Statevector sim will fail or give collapsed, post-measurement state if measured)
+        # We want to see the state BEFORE measurement for education usually.
+        # So we create a copy without measurements.
+        circ_no_meas = qiskit_circ.copy()
+        circ_no_meas.remove_final_measurements() 
+
+        transpiled_circuit = transpile(circ_no_meas, sv_backend)
+        job = sv_backend.run(transpiled_circuit)
+        result = job.result()
+        return result.get_statevector()

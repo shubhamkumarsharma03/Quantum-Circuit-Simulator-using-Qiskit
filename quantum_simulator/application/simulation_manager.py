@@ -28,3 +28,12 @@ class SimulationManager:
         
         logger.info("Simulation completed successfully.")
         return counts, qiskit_circ
+
+    def get_statevector(self, logical_circuit: LogicalCircuit):
+        """
+        Returns the statevector of the circuit (pre-measurement).
+        """
+        logger.info("Computing statevector...")
+        qiskit_circ = QiskitEngine.translate(logical_circuit)
+        statevector = self.simulator.run_statevector(qiskit_circ)
+        return statevector
