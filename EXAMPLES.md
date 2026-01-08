@@ -1,67 +1,113 @@
-# Simulator Examples
+# GUI Simulator Examples
 
-This document provides example usage for the **Industry-Grade Quantum Simulator**. You can run these examples using the GUI Presets or chemically via the CLI (future implementation). Currently, the best way to explore these is via the `python main.py --gui` interface.
+This guide provides step-by-step instructions for running quantum circuits using the **Circuit Builder** and **Quantum Finance** tabs in the GUI.
+
+---
 
 ## 1. Bell State (Entanglement)
-**Goal**: Create a pair of entangled qubits.
-**Mathematical State**: $|\Phi^+\rangle = \frac{|00\rangle + |11\rangle}{\sqrt{2}}$
 
-### Steps:
-1. Initialize a circuit with **2 qubits**.
-2. Apply **Hadamard (H)** to Qubit 0.
-3. Apply **CNOT** (Qubit 0 as Control, Qubit 1 as Target).
+**Goal**: Create a pair of entangled qubits $|\Phi^+\rangle = \frac{|00\rangle + |11\rangle}{\sqrt{2}}$.
 
-### Expected Output:
-- **Histogram**: ~50% probability for `00` and ~50% for `11`.
-- **Circuit Diagram**:
-```
-q0: ──H────■────M──
-           │    ║
-q1: ───────+────M──
-```
+### Method A: The Fast Way (Presets)
+1.  **Qubits Input**: Ignore (Preset overrides this).
+2.  **Preset Dropdown**: Select **Bell State**.
+3.  **Button**: Click **Load**.
+4.  **Visualize**: Click **Visualize Circuit** to see the H and CX gates.
+5.  **Run**: Click **Run Simulation**.
+
+### Method B: Manual Build (Step-by-Step)
+1.  **Reset**: Click the red **Reset App** button (Top Right).
+2.  **Qubits**: Type `2` and click **Create**.
+3.  **Add H Gate**:
+    - Select **H** radio button.
+    - **Idx 1**: Type `0`.
+    - Click **Add Gate**.
+4.  **Add CNOT Gate**:
+    - Select **CX** radio button.
+    - **Idx 1**: Type `0` (Control).
+    - **Idx 2**: Type `1` (Target).
+    - Click **Add Gate**.
+5.  **Run**: Click **Run Simulation**.
+
+**Expected Output**:
+- **Histogram**: Two bars roughly equal height at `00` and `11`.
+- **Probabilities**: ~0.50 for each.
 
 ---
 
 ## 2. GHZ State (Multipartite Entanglement)
-**Goal**: Entangle three or more qubits.
-**Mathematical State**: $|GHZ\rangle = \frac{|000\rangle + |111\rangle}{\sqrt{2}}$
 
-### Steps:
-1. Initialize a circuit with **3 qubits**.
-2. Apply **H** to Qubit 0.
-3. Apply **CNOT** (0 -> 1).
-4. Apply **CNOT** (1 -> 2).
+**Goal**: Entangle three qubits $|\text{GHZ}\rangle = \frac{|000\rangle + |111\rangle}{\sqrt{2}}$.
 
-### Expected Output:
-- **Histogram**: ~50% `000` and ~50% `111`.
-- Probabilities for other states (e.g., `001`, `010`) should be near zero (noise-free simulation).
+### Method A: The Fast Way (Presets)
+1.  **Preset Dropdown**: Select **GHZ State**.
+2.  **Button**: Click **Load**.
+3.  **Run**: Click **Run Simulation**.
+
+### Method B: Manual Build (Step-by-Step)
+1.  **Reset**: Click **Reset App**.
+2.  **Qubits**: Type `3` and click **Create**.
+3.  **Add H Gate**:
+    - Select **H**.
+    - **Idx 1**: `0`.
+    - Click **Add Gate**.
+4.  **Add CNOT (0 -> 1)**:
+    - Select **CX**.
+    - **Idx 1**: `0`.
+    - **Idx 2**: `1`.
+    - Click **Add Gate**.
+5.  **Add CNOT (1 -> 2)**:
+    - Select **CX**.
+    - **Idx 1**: `1`.
+    - **Idx 2**: `2`.
+    - Click **Add Gate**.
+6.  **Run**: Click **Run Simulation**.
+
+**Expected Output**:
+- **Histogram**: Two bars roughly equal height at `000` and `111`.
+- **Note**: If you see other bars like `010` or `101`, double-check that you entered the correct indices for the CNOT gates!
+
+![GHZ Correct Output](ghz_correct_output.png)
+
+#### Detailed Views:
+**Circuit Diagram**:
+![GHZ Circuit](ghz_circuit_detail.png)
+
+**Measurement Results**:
+![GHZ Histogram](ghz_histogram_detail.png)
 
 ---
 
 ## 3. Quantum Teleportation
-**Goal**: Transfer the state of one qubit to another using entanglement and classical communication.
 
-### Circuit Logic:
-1. **Entanglement**: Create a Bell pair between Alice (Q1) and Bob (Q2).
-2. **Preparation**: Prepare the payload state on Alice's Qubit (Q0) (e.g., using RX/RY gates).
-3. **Bell Measurement**: Alice performs CNOT(Q0, Q1) and H(Q0), then measures logic.
-4. **Correction**: Bob applies X and Z gates based on Alice's results (Simulated via deferred gates here).
+**Goal**: Transfer state from Qubit 0 to Qubit 2.
 
-### Expected Output:
-- If Q0 was prepared in state $|1\rangle$, Bob's qubit (Q2) will be measured as `1` with 100% probability.
-- If Q0 was in superposition, Bob's qubit will match the statistics of the original state.
+### Steps:
+1.  **Reset**: Click **Reset App**.
+2.  **Preset Dropdown**: Select **Teleportation**.
+3.  **Button**: Click **Load**.
+4.  **Visualize**: Click **Visualize Circuit**.
+    - You will see a complex circuit involving H, CX, and measurements.
+5.  **Run**: Click **Run Simulation**.
 
 ---
 
-## 4. Single Qubit Rotation (Parametric Gates)
-**Goal**: Rotate a qubit state by a specific angle $\theta$.
+## 4. Quantum Finance: AAPL Stock Analysis
+
+**Goal**: Encode real Apple stock prices into a quantum circuit.
 
 ### Steps:
-1. Initialize **1 qubit**.
-2. Select **RX** (Rotation X) gate.
-3. Enter Theta = `3.14` (approx $\pi$).
-4. Apply to Qubit 0.
+1.  **Tab**: Switch to **Quantum Finance** tab.
+2.  **Stock Symbol**: Select **AAPL**.
+3.  **Days**: Enter `10`.
+4.  **Button**: Click **Load Data**.
+    - *Wait for the "Loading..." bar to finish.*
+5.  **Encoding**: Select **Angle Encoding**.
+6.  **Button**: Click **Generate Circuit**.
+7.  **Visualize**: Look at the "Quantum Circuit" panel at the bottom right.
+    - You will see 10 qubits with RY gates.
+    - Hover over the gates (optional) or the stock chart points to see values.
 
-### Expected Output:
-- Since $RX(\pi)$ is equivalent to a Pauli-X (NOT) gate:
-- **Histogram**: 100% probability of state `1`.
+**Interpretation**:
+- The rotation angles represent the normalized price of the stock for each day.
+- Measuring this circuit gives a probability distribution reflecting the price trends.
